@@ -1,0 +1,111 @@
+{
+  "name": "picgo-plugin-optimization",
+  "version": "0.1.0",
+  "description": "基于 sharp 的 PicGo 图片格式转换和压缩插件",
+  "author": "CaoMeiYouRen",
+  "private": false,
+  "license": "MIT",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "release": "semantic-release",
+    "lint": "cross-env NODE_ENV=production eslint . --fix",
+    "prebuild": "rimraf dist",
+    "build": "cross-env NODE_ENV=production tsdown",
+    "dev": "cross-env NODE_ENV=development tsx watch src/index.ts",
+    "dev:tsup": "cross-env NODE_ENV=development tsdown --watch",
+    "start": "node ./dist/index",
+    "start:tsx": "cross-env NODE_ENV=production tsx src/index.ts",
+    "commit": "cz",
+    "prepare": "husky",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^18.6.3",
+    "@types/debug": "^4.1.12",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.5.2",
+    "commitizen": "^4.3.1",
+    "commitlint": "^19.8.1",
+    "commitlint-config-cmyr": "^1.0.0",
+    "cross-env": "^10.0.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "cz-conventional-changelog-cmyr": "^2.0.0",
+    "debug": "^4.4.3",
+    "eslint": "^9.34.0",
+    "eslint-config-cmyr": "^2.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
+    "rimraf": "^6.0.1",
+    "semantic-release": "^24.2.9",
+    "semantic-release-cmyr-config": "^1.0.0",
+    "tsdown": "^0.15.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.0.5",
+    "vitest": "^3.2.4"
+  },
+  "config": {},
+  "changelog": {
+    "language": "zh"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "npm run lint",
+      "git add"
+    ]
+  },
+  "keywords": [
+    "picgo-gui-plugin",
+    "picgo-plugin",
+    "picgo",
+    "sharp",
+    "optimization",
+    "image",
+    "compress",
+    "typescript"
+  ],
+  "homepage": "https://github.com/CaoMeiYouRen/picgo-plugin-optimization#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CaoMeiYouRen/picgo-plugin-optimization.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CaoMeiYouRen/picgo-plugin-optimization/issues"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.2",
+    "tslib": "^2.8.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "compare-func": "^2.0.0",
+      "katex": "^0.16.21",
+      "esbuild": "^0.25.0",
+      "@octokit/plugin-paginate-rest": "^11.4.1",
+      "@octokit/request": "^9.2.1",
+      "@octokit/request-error": "^5.1.1",
+      "brace-expansion": "^2.0.2",
+      "tmp": "^0.2.4"
+    }
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
+}
