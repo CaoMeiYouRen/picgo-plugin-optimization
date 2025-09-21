@@ -110,14 +110,153 @@ async function handle(ctx: IPicGo): Promise<void> {
             if (!item.buffer) {
                 continue
             }
-            // 这里稍后接入 sharp 处理
+            const beforeSize = item.buffer.length
+            const originalExt = (item.extname || item.fileName.split('.').pop() || '').toLowerCase().replace(/^\./, '')
+            const targetFormat = resolveTargetFormat(userConfig.format ?? 'webp', originalExt)
+            const quality = normalizeQuality(userConfig.quality)
+            const maxWidth = userConfig.maxWidth || 0
+            const maxHeight = userConfig.maxHeight || 0
+            const skipIfLarger = userConfig.skipIfLarger !== false // 默认 true
+
             if (userConfig.enableLogging) {
-                debug('处理文件: %s, size=%d', item.fileName, item.buffer.length)
+                debug('处理文件: %s 原始: ext=%s size=%d 计划: format=%s quality=%s resize=%s', item.fileName, originalExt, beforeSize, targetFormat, quality, (maxWidth || maxHeight) ? `${maxWidth || 'auto'}x${maxHeight || 'auto'}` : 'no')
             }
-            // 未来: 读取 image metadata, 按需缩放 / 转换
+
+            // 若无需转换且无需缩放则跳过
+            const needResize = !!(maxWidth || maxHeight)
+            if (!needResize && targetFormat === originalExt) {
+                continue
+            }
+
+            const { buffer: newBuffer, widthChanged } = await optimizeBuffer(item.buffer, {
+                targetFormat,
+                quality,
+                maxWidth,
+                maxHeight,
+            })
+
+            if (skipIfLarger && newBuffer.length > beforeSize) {
+                if (userConfig.enableLogging) {
+                    debug('回退: 转换后体积更大 %s %d -> %d', item.fileName, beforeSize, newBuffer.length)
+                }
+                continue
+            }
+
+            item.buffer = newBuffer
+            if (targetFormat !== originalExt) {
+                item.extname = `.${targetFormat}`
+                item.fileName = replaceFileExt(item.fileName, targetFormat)
+            }
+            if (userConfig.enableLogging) {
+                const saved = ((1 - newBuffer.length / beforeSize) * 100).toFixed(2)
+                debug('完成: %s 新尺寸变更=%s 节省=%s%% 新体积=%d', item.fileName, widthChanged, saved, newBuffer.length)
+            }
         } catch (err) {
             debug('处理失败: %s %O', item.fileName, err)
         }
+    }
+}
+
+// ---------- 辅助逻辑实现 ----------
+
+interface OptimizeOptions {
+    targetFormat: string
+    quality: number
+    maxWidth: number
+    maxHeight: number
+}
+
+function normalizeQuality(q?: number): number {
+    if (typeof q !== 'number') {
+        return 80
+    }
+    if (q < 1) {
+        return 1
+    }
+    if (q > 100) {
+        return 100
+    }
+    return Math.round(q)
+}
+
+function resolveTargetFormat(target: string, original: string): string {
+    if (!target || target === 'auto') {
+        return 'webp'
+    }
+    return target.toLowerCase()
+}
+
+function replaceFileExt(name: string, ext: string): string {
+    return `${name.replace(/\.[^.]+$/, '')}.${ext}`
+}
+
+interface OptimizeResult {
+    buffer: Buffer
+    widthChanged: boolean
+}
+
+async function optimizeBuffer(input: Buffer, opt: OptimizeOptions): Promise<OptimizeResult> {
+    const { targetFormat, quality, maxWidth, maxHeight } = opt
+    const image = sharp(input, { sequentialRead: true })
+    const meta = await image.metadata()
+    let widthChanged = false
+    let resized = image
+    // resize 逻辑
+    if ((maxWidth || maxHeight) && meta.width && meta.height) {
+        const { width, height } = computeResize(meta.width, meta.height, maxWidth, maxHeight)
+        if (width !== meta.width || height !== meta.height) {
+            resized = resized.resize(width, height)
+            widthChanged = true
+        }
+    }
+    const encoded = applyFormat(resized, targetFormat, quality)
+    const buffer = await encoded.toBuffer()
+    return { buffer, widthChanged }
+}
+
+interface Size {
+    width: number
+    height: number
+}
+function computeResize(w: number, h: number, maxW: number, maxH: number): Size {
+    let width = w
+    let height = h
+    if (maxW && width > maxW) {
+        const ratio = maxW / width
+        width = maxW
+        height = Math.round(height * ratio)
+    }
+    if (maxH && height > maxH) {
+        const ratio = maxH / height
+        height = maxH
+        width = Math.round(width * ratio)
+    }
+    return { width, height }
+}
+
+function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp.Sharp {
+    switch (fmt) {
+        case 'jpg':
+        case 'jpeg':
+            return instance.jpeg({ quality, progressive: true, mozjpeg: true })
+        case 'png':
+            return instance.png({ quality, compressionLevel: quality >= 90 ? 9 : 8, palette: false })
+        case 'webp':
+            return instance.webp({ quality })
+        case 'avif':
+            return instance.avif({ quality })
+        case 'tiff':
+            return instance.tiff({ quality, compression: 'lzw' })
+        case 'gif':
+            return instance.gif({ effort: Math.min(10, Math.max(0, Math.floor(quality / 10))) })
+        case 'heif':
+            return instance.heif({ quality })
+        case 'jp2':
+            return instance.jp2({ quality })
+        case 'jxl':
+            return instance.jxl({ quality })
+        default:
+            return instance
     }
 }
 
