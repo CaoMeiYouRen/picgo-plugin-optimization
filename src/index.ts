@@ -29,7 +29,7 @@ export interface IPicGo {
 
 // 插件用户配置类型
 export interface OptimizationConfig {
-    format?: string // 目标格式: webp|jpeg|png|avif|auto 等
+    format?: string // 若为空或未指定，则保持原格式；填写支持格式则强制转换
     quality?: number // 质量 1-100
     maxWidth?: number // 最大宽度
     maxHeight?: number // 最大高度
@@ -51,8 +51,8 @@ function config(ctx: IPicGo): IPluginConfig[] {
             name: 'format',
             type: 'input',
             default: userConfig.format ?? 'webp',
-            alias: '目标格式(webp/jpeg/png/avif/auto)',
-            message: '输入目标格式，auto 表示按源图自动判断是否需要转换',
+            alias: '输出格式(留空保持原格式)',
+            message: '可填写: jpeg|jpg|png|webp|jp2|tiff|avif|heif|jxl|svg|gif；留空表示不转换',
             required: false,
         },
         {
@@ -179,11 +179,21 @@ function normalizeQuality(q?: number): number {
     return Math.round(q)
 }
 
+export type Format = 'jpeg' | 'jpg' | 'png' | 'webp' | 'jp2' | 'tiff' | 'avif' | 'heif' | 'jxl' | 'svg' | 'gif'
+const SUPPORTED_FORMATS: Format[] = ['jpeg', 'jpg', 'png', 'webp', 'jp2', 'tiff', 'avif', 'heif', 'jxl', 'svg', 'gif']
+
 function resolveTargetFormat(target: string, original: string): string {
-    if (!target || target === 'auto') {
-        return 'webp'
+    if (!target) {
+        // 未配置 => 保持原格式
+        return original
     }
-    return target.toLowerCase()
+    const lower = target.toLowerCase()
+    if (SUPPORTED_FORMATS.includes(lower as Format)) {
+        // 若与原格式相同则等同于不转换
+        return lower
+    }
+    // 不支持的目标 => 保持原格式
+    return original
 }
 
 function replaceFileExt(name: string, ext: string): string {
