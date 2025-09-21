@@ -156,10 +156,10 @@ async function handle(ctx: IPicGo): Promise<void> {
             })
 
             // 若无需转换且无需缩放则跳过
-            const needResize = !!(maxWidth || maxHeight)
-            if (!needResize && targetFormat === originalExt) {
-                continue
-            }
+            // const needResize = !!(maxWidth || maxHeight)
+            // if (!needResize && targetFormat === originalExt) {
+            //     continue
+            // }
 
             const { buffer: newBuffer, widthChanged } = await optimizeBuffer(item.buffer, {
                 targetFormat,
