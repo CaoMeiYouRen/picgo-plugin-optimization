@@ -34,7 +34,7 @@ function config(ctx: IPicGo): IPluginConfig[] {
         {
             name: 'format',
             type: 'input',
-            default: userConfig.format ?? 'webp',
+            default: userConfig.format ?? '',
             alias: '输出格式(留空保持原格式)',
             message: '可填写: jpeg|jpg|png|webp|jp2|tiff|avif|heif|jxl|svg|gif；留空表示不转换',
             required: false,
@@ -82,6 +82,62 @@ function config(ctx: IPicGo): IPluginConfig[] {
     ]
 }
 
+
+// GUI 菜单 (PicGo GUI 调用)
+function guiMenu(ctx: IPicGo) {
+    return [
+        {
+            label: '查看当前配置',
+            async handle(innerCtx: IPicGo, guiApi: any) {
+                const cfg = innerCtx.getConfig('picgo-plugin-optimization') || {}
+                const text = JSON.stringify(cfg, null, 2)
+                if (guiApi?.showMessageBox) {
+                    await guiApi.showMessageBox({ title: 'picgo-plugin-optimization 配置', message: text, type: 'info' })
+                } else {
+                    debug('当前配置', text)
+                }
+            },
+        },
+        {
+            label: '切换详细日志',
+            async handle(innerCtx: IPicGo, guiApi: any) {
+                const cfg = (innerCtx.getConfig('picgo-plugin-optimization') as any) || {}
+                const next = !cfg.enableLogging
+                ;(innerCtx as any).setConfig?.({ 'picgo-plugin-optimization.enableLogging': next })
+                guiApi?.showNotification?.({ title: 'Optimization', body: `详细日志: ${next ? '开启' : '关闭'}` })
+            },
+        },
+        {
+            label: '设置目标格式',
+            async handle(innerCtx: IPicGo, guiApi: any) {
+                const value = await guiApi?.showInputBox?.({ title: '输入目标格式(留空保持原格式)', placeholder: 'webp / avif / png / ...' })
+                if (value === undefined) {
+                    return
+                }
+                ;(innerCtx as any).setConfig?.({ 'picgo-plugin-optimization.format': value.trim() || '' })
+                guiApi?.showNotification?.({ title: 'Optimization', body: `format = ${value || '(保留原格式)'}` })
+            },
+        },
+        {
+            label: '选择文件并上传',
+            async handle(_innerCtx: IPicGo, guiApi: any) {
+                const files: string[] = await guiApi?.showFileExplorer?.({ properties: ['openFile', 'multiSelections'] })
+                if (!files?.length) {
+                    return
+                }
+                const res = await guiApi.upload(files)
+                guiApi?.showNotification?.({ title: 'Optimization', body: `上传完成 ${res?.length || 0} 张` })
+            },
+        },
+        {
+            label: '打开项目主页',
+            async handle(_innerCtx: IPicGo, guiApi: any) {
+                guiApi?.showNotification?.({ title: 'Optimization', body: 'https://github.com/CaoMeiYouRen/picgo-plugin-optimization' })
+            },
+        },
+    ]
+}
+
 // 核心处理逻辑占位（后续补完 sharp 处理）
 async function handle(ctx: IPicGo): Promise<void> {
     const userConfig = getUserConfig(ctx)
@@ -96,7 +152,7 @@ async function handle(ctx: IPicGo): Promise<void> {
             }
             const beforeSize = item.buffer.length
             const originalExt = (item.extname || item.fileName.split('.').pop() || '').toLowerCase().replace(/^\./, '')
-            const targetFormat = resolveTargetFormat(userConfig.format ?? 'webp', originalExt)
+            const targetFormat = resolveTargetFormat(userConfig.format || '', originalExt)
             const quality = normalizeQuality(userConfig.quality)
             const maxWidth = userConfig.maxWidth || 0
             const maxHeight = userConfig.maxHeight || 0
@@ -265,8 +321,9 @@ const register = (ctx: IPicGo): void => {
 export { register }
 export const transformer = 'optimization'
 
-export default (ctx: IPicGo) => ({
+
+module.exports = (ctx: IPicGo) => ({
     register,
     transformer,
+    guiMenu,
 })
-
