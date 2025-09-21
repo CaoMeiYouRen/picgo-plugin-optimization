@@ -1,29 +1,13 @@
-import Debug from 'debug'
-import PicGo, { IPluginConfig } from 'picgo'
+import { IPicGo, IPluginConfig } from 'picgo'
 import sharp from 'sharp'
-const debug = Debug('picgo-plugin-optimization')
+
+// const debug = process.env.NODE_ENV === 'production' ? console.log : Debug('picgo-plugin-optimization')
+const debug = console.log
 
 export interface IPicGoOutputItem {
     buffer?: Buffer
     fileName: string
     extname?: string
-    [k: string]: any
-}
-
-export interface IPicGo {
-    output: IPicGoOutputItem[]
-    getConfig: <T = any>(path: string) => T | undefined
-    helper: {
-        transformer: {
-            register: (
-                name: string,
-                transformer: {
-                    handle: (ctx: IPicGo) => Promise<void> | void
-                    config?: (ctx: IPicGo) => IPluginConfig[]
-                },
-            ) => void
-        }
-    }
     [k: string]: any
 }
 
