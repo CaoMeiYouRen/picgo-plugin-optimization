@@ -299,21 +299,21 @@ function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp
     }
 }
 
-// 注册 transformer
+// 注册 beforeUpload 插件（替代 transformer）
 const register = (ctx: IPicGo): void => {
-    ctx.helper.transformer.register('optimization', {
+    ctx.helper.beforeUploadPlugins.register('optimization', {
         handle,
         config,
+        name: '图片优化 (beforeUpload)',
     })
 }
 
 export { register }
-export const transformer = 'optimization'
-
+export const beforeUploadPlugins = 'optimization'
 
 module.exports = (ctx: IPicGo) => ({
     register,
-    transformer,
+    beforeUploadPlugins,
     guiMenu,
     config,
 })
