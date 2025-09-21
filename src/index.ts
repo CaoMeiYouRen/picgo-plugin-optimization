@@ -1,8 +1,34 @@
 import { IPicGo, IPluginConfig } from 'picgo'
 import sharp from 'sharp'
 
-// const debug = process.env.NODE_ENV === 'production' ? console.log : Debug('picgo-plugin-optimization')
-const debug = console.log
+// 统一日志封装，优先使用 ctx.log，受 enableLogging 控制
+function createLogger(ctx: IPicGo, enable: boolean) {
+    const base = ctx.log || console
+    return {
+        info: (...args: any[]) => enable && base.info?.('[optimization]', ...args),
+        warn: (...args: any[]) => {
+            if (!enable) {
+                return
+            }
+            if (base.warn) {
+                base.warn('[optimization]', ...args)
+            } else if (base.info) {
+                base.info('[optimization][WARN]', ...args)
+            } else {
+                console.warn('[optimization]', ...args)
+            }
+        },
+        error: (...args: any[]) => {
+            if (base.error) {
+                base.error('[optimization]', ...args)
+            } else if (base.info) {
+                base.info('[optimization][ERR]', ...args)
+            } else {
+                console.error('[optimization]', ...args)
+            }
+        }, // error 总是输出
+    }
+}
 
 export interface IPicGoOutputItem {
     buffer?: Buffer
@@ -85,6 +111,8 @@ function config(ctx: IPicGo): IPluginConfig[] {
 
 // GUI 菜单 (PicGo GUI 调用)
 function guiMenu(ctx: IPicGo) {
+    const userConfig = getUserConfig(ctx)
+    const logger = createLogger(ctx, !!userConfig.enableLogging)
     return [
         {
             label: '查看当前json配置',
@@ -94,19 +122,18 @@ function guiMenu(ctx: IPicGo) {
                 if (guiApi?.showMessageBox) {
                     await guiApi.showMessageBox({ title: 'picgo-plugin-optimization 配置', message: text, type: 'info' })
                 } else {
-                    debug('当前配置', text)
+                    logger.info('[optimization] 当前配置', text)
                 }
             },
         },
     ]
 }
 
-// 核心处理逻辑占位（后续补完 sharp 处理）
+// 核心处理逻辑
 async function handle(ctx: IPicGo): Promise<void> {
     const userConfig = getUserConfig(ctx)
-    if (userConfig.enableLogging) {
-        debug('用户配置: %O', userConfig)
-    }
+    const logger = createLogger(ctx, !!userConfig.enableLogging)
+    logger.info('用户配置', userConfig)
     const output = ctx.output || []
     for (const item of output) {
         try {
@@ -121,9 +148,12 @@ async function handle(ctx: IPicGo): Promise<void> {
             const maxHeight = userConfig.maxHeight || 0
             const skipIfLarger = userConfig.skipIfLarger !== false // 默认 true
 
-            if (userConfig.enableLogging) {
-                debug('处理文件: %s 原始: ext=%s size=%d 计划: format=%s quality=%s resize=%s', item.fileName, originalExt, beforeSize, targetFormat, quality, (maxWidth || maxHeight) ? `${maxWidth || 'auto'}x${maxHeight || 'auto'}` : 'no')
-            }
+            logger.info('处理文件', {
+                file: item.fileName,
+                originalExt,
+                size: beforeSize,
+                plan: { format: targetFormat, quality, resize: (maxWidth || maxHeight) ? `${maxWidth || 'auto'}x${maxHeight || 'auto'}` : 'no' },
+            })
 
             // 若无需转换且无需缩放则跳过
             const needResize = !!(maxWidth || maxHeight)
@@ -139,9 +169,7 @@ async function handle(ctx: IPicGo): Promise<void> {
             })
 
             if (skipIfLarger && newBuffer.length > beforeSize) {
-                if (userConfig.enableLogging) {
-                    debug('回退: 转换后体积更大 %s %d -> %d', item.fileName, beforeSize, newBuffer.length)
-                }
+                logger.warn('回退: 转换后更大', { file: item.fileName, before: beforeSize, after: newBuffer.length })
                 continue
             }
 
@@ -150,12 +178,10 @@ async function handle(ctx: IPicGo): Promise<void> {
                 item.extname = `.${targetFormat}`
                 item.fileName = replaceFileExt(item.fileName, targetFormat)
             }
-            if (userConfig.enableLogging) {
-                const saved = ((1 - newBuffer.length / beforeSize) * 100).toFixed(2)
-                debug('完成: %s 新尺寸变更=%s 节省=%s%% 新体积=%d', item.fileName, widthChanged, saved, newBuffer.length)
-            }
+            const saved = ((1 - newBuffer.length / beforeSize) * 100).toFixed(2)
+            logger.info('完成优化', { file: item.fileName, widthChanged, savedPercent: saved, newSize: newBuffer.length })
         } catch (err) {
-            debug('处理失败: %s %O', item.fileName, err)
+            logger.error('处理失败', item.fileName, err)
         }
     }
 }
