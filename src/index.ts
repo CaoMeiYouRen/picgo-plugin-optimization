@@ -87,7 +87,7 @@ function config(ctx: IPicGo): IPluginConfig[] {
 function guiMenu(ctx: IPicGo) {
     return [
         {
-            label: '查看当前配置',
+            label: '查看当前json配置',
             async handle(innerCtx: IPicGo, guiApi: any) {
                 const cfg = innerCtx.getConfig('picgo-plugin-optimization') || {}
                 const text = JSON.stringify(cfg, null, 2)
@@ -96,43 +96,6 @@ function guiMenu(ctx: IPicGo) {
                 } else {
                     debug('当前配置', text)
                 }
-            },
-        },
-        {
-            label: '切换详细日志',
-            async handle(innerCtx: IPicGo, guiApi: any) {
-                const cfg = (innerCtx.getConfig('picgo-plugin-optimization') as any) || {}
-                const next = !cfg.enableLogging
-                ;(innerCtx as any).setConfig?.({ 'picgo-plugin-optimization.enableLogging': next })
-                guiApi?.showNotification?.({ title: 'Optimization', body: `详细日志: ${next ? '开启' : '关闭'}` })
-            },
-        },
-        {
-            label: '设置目标格式',
-            async handle(innerCtx: IPicGo, guiApi: any) {
-                const value = await guiApi?.showInputBox?.({ title: '输入目标格式(留空保持原格式)', placeholder: 'webp / avif / png / ...' })
-                if (value === undefined) {
-                    return
-                }
-                ;(innerCtx as any).setConfig?.({ 'picgo-plugin-optimization.format': value.trim() || '' })
-                guiApi?.showNotification?.({ title: 'Optimization', body: `format = ${value || '(保留原格式)'}` })
-            },
-        },
-        {
-            label: '选择文件并上传',
-            async handle(_innerCtx: IPicGo, guiApi: any) {
-                const files: string[] = await guiApi?.showFileExplorer?.({ properties: ['openFile', 'multiSelections'] })
-                if (!files?.length) {
-                    return
-                }
-                const res = await guiApi.upload(files)
-                guiApi?.showNotification?.({ title: 'Optimization', body: `上传完成 ${res?.length || 0} 张` })
-            },
-        },
-        {
-            label: '打开项目主页',
-            async handle(_innerCtx: IPicGo, guiApi: any) {
-                guiApi?.showNotification?.({ title: 'Optimization', body: 'https://github.com/CaoMeiYouRen/picgo-plugin-optimization' })
             },
         },
     ]
@@ -326,4 +289,5 @@ module.exports = (ctx: IPicGo) => ({
     register,
     transformer,
     guiMenu,
+    config,
 })
