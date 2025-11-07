@@ -1,5 +1,12 @@
 # picgo-plugin-optimization
 
+## [1.0.1](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.0...v1.0.1) (2025-11-07)
+
+
+### 🐛 Bug 修复
+
+* **png:** 优化 PNG 压缩级别计算逻辑 ([11222bf](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/11222bf))
+
 # 1.0.0 (2025-09-21)
 
 
