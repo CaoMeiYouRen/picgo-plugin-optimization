@@ -279,7 +279,7 @@ function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp
         case 'jpeg':
             return instance.jpeg({ quality, progressive: true, mozjpeg: true })
         case 'png':
-            return instance.png({ quality, compressionLevel: quality >= 90 ? 9 : 8, palette: false })
+            return instance.png({ quality, compressionLevel: Math.min(9, Math.max(4, Math.floor(quality / 10) - 1)), palette: false })
         case 'webp':
             return instance.webp({ quality })
         case 'avif':
