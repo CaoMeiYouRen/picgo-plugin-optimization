@@ -279,7 +279,8 @@ function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp
         case 'jpeg':
             return instance.jpeg({ quality, progressive: true, mozjpeg: true })
         case 'png':
-            return instance.png({ quality, compressionLevel: Math.min(9, Math.max(4, Math.floor(quality / 10) - 1)), palette: false })
+            // compressionLevel 应该始终设置为较高的值以获得更好的压缩效果
+            return instance.png({ quality, compressionLevel: 9, palette: false })
         case 'webp':
             return instance.webp({ quality })
         case 'avif':
