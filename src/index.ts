@@ -208,6 +208,24 @@ function normalizeQuality(q?: number): number {
     return Math.round(q)
 }
 
+/**
+ * 计算 effort 参数，根据不同的范围，将 effort 映射到规定的 effort 范围内
+ * @param effort 输入的 effort 值
+ * @returns 归一化后的 effort 值
+ */
+function normalizeEffort(effort?: number, min = 1, max = 10): number {
+    if (typeof effort !== 'number') {
+        return Math.round((min + max) / 2)
+    }
+    if (effort < min) {
+        return min
+    }
+    if (effort > max) {
+        return max
+    }
+    return Math.round(effort)
+}
+
 export type Format = 'jpeg' | 'jpg' | 'png' | 'webp' | 'jp2' | 'tiff' | 'avif' | 'heif' | 'jxl' | 'svg' | 'gif'
 const SUPPORTED_FORMATS: Format[] = ['jpeg', 'jpg', 'png', 'webp', 'jp2', 'tiff', 'avif', 'heif', 'jxl', 'svg', 'gif']
 
@@ -273,6 +291,10 @@ function computeResize(w: number, h: number, maxW: number, maxH: number): Size {
     return { width, height }
 }
 
+function getEffort(quality: number, divisor: number = 10, offset: number = 0): number {
+    return Math.floor(quality / divisor) + offset
+}
+
 function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp.Sharp {
     switch (fmt) {
         case 'jpg':
@@ -280,21 +302,21 @@ function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp
             return instance.jpeg({ quality, progressive: true, mozjpeg: true })
         case 'png':
             // compressionLevel 应该始终设置为较高的值以获得更好的压缩效果
-            return instance.png({ quality, compressionLevel: 9, palette: false })
+            return instance.png({ quality, compressionLevel: 9, palette: false, effort: normalizeEffort(getEffort(quality, 10), 1, 10) })
         case 'webp':
-            return instance.webp({ quality })
+            return instance.webp({ quality, alphaQuality: quality, effort: normalizeEffort(getEffort(quality, 15), 0, 6) })
         case 'avif':
-            return instance.avif({ quality })
+            return instance.avif({ quality, effort: normalizeEffort(getEffort(quality, 10, -1), 0, 9) })
         case 'tiff':
             return instance.tiff({ quality, compression: 'lzw' })
         case 'gif':
-            return instance.gif({ effort: Math.min(10, Math.max(0, Math.floor(quality / 10))) })
+            return instance.gif({ effort: normalizeEffort(getEffort(quality, 10), 1, 10) })
         case 'heif':
-            return instance.heif({ quality })
+            return instance.heif({ quality, effort: normalizeEffort(getEffort(quality, 10, -1), 0, 9) })
         case 'jp2':
             return instance.jp2({ quality })
         case 'jxl':
-            return instance.jxl({ quality })
+            return instance.jxl({ quality, effort: normalizeEffort(getEffort(quality, 10, -1), 3, 9) })
         default:
             return instance
     }
