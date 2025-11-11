@@ -1,5 +1,13 @@
 # picgo-plugin-optimization
 
+## [1.0.2](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.1...v1.0.2) (2025-11-11)
+
+
+### 🐛 Bug 修复
+
+* **effort:** 添加 normalizeEffort 函数以归一化 effort 参数并在格式应用中使用 ([5da67a1](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/5da67a1))
+* **png:** 始终将 compressionLevel 设置为 9 以优化 PNG 压缩效果 ([c4175cc](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/c4175cc))
+
 ## [1.0.1](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.0...v1.0.1) (2025-11-07)
 
 
