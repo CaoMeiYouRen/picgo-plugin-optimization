@@ -41,7 +41,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^24.5.2",
     "commitizen": "^4.3.1",
-    "commitlint": "^20.0.0",
+    "commitlint": "^20.1.0",
     "commitlint-config-cmyr": "^1.0.0",
     "cross-env": "^10.0.0",
     "cz-conventional-changelog": "^3.3.0",
@@ -51,8 +51,8 @@
     "eslint-config-cmyr": "^2.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
-    "picgo": "^1.5.9",
-    "rimraf": "^6.0.1",
+    "picgo": "^1.5.11",
+    "rimraf": "^6.1.0",
     "semantic-release": "^25.0.1",
     "semantic-release-cmyr-config": "^1.0.0",
     "tsdown": "^0.15.4",
@@ -67,7 +67,7 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "npm run lint",
+      "pnpm run lint",
       "git add"
     ]
   },
@@ -117,7 +117,8 @@
       "ejs": "^3.1.10",
       "got": "^11.8.6",
       "http-cache-semantics": "^4.1.1",
-      "tar": "^7.5.2"
+      "tar": "^7.5.2",
+      "js-yaml": "^4.1.1"
     },
     "onlyBuiltDependencies": [
       "ejs",
