@@ -1,5 +1,13 @@
 # picgo-plugin-optimization
 
+## [1.0.3](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.2...v1.0.3) (2025-11-19)
+
+
+### 🐛 Bug 修复
+
+* remove deprecated git add from lint-staged config ([397315a](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/397315a))
+* update dependencies and fix security vulnerabilities ([5835418](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/5835418))
+
 ## [1.0.2](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.1...v1.0.2) (2025-11-11)
 
 
