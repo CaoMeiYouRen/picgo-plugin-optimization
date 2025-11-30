@@ -52,7 +52,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
     "picgo": "^1.5.11",
-    "rimraf": "^6.1.0",
+    "rimraf": "^6.1.2",
     "semantic-release": "^25.0.1",
     "semantic-release-cmyr-config": "^1.0.0",
     "tsdown": "^0.16.5",
