@@ -156,10 +156,11 @@ async function handle(ctx: IPicGo): Promise<void> {
             })
 
             // 若无需转换且无需缩放则跳过
-            // const needResize = !!(maxWidth || maxHeight)
-            // if (!needResize && targetFormat === originalExt) {
-            //     continue
-            // }
+            const needResize = !!(maxWidth || maxHeight)
+            if (!needResize && normalizeFormatAlias(targetFormat) === normalizeFormatAlias(originalExt)) {
+                logger.info('跳过: 格式相同且无需缩放', { file: item.fileName, format: targetFormat })
+                continue
+            }
 
             const { buffer: newBuffer, widthChanged } = await optimizeBuffer(item.buffer, {
                 targetFormat,
@@ -228,6 +229,14 @@ function normalizeEffort(effort?: number, min = 1, max = 10): number {
 
 export type Format = 'jpeg' | 'jpg' | 'png' | 'webp' | 'jp2' | 'tiff' | 'avif' | 'heif' | 'jxl' | 'svg' | 'gif'
 const SUPPORTED_FORMATS: Format[] = ['jpeg', 'jpg', 'png', 'webp', 'jp2', 'tiff', 'avif', 'heif', 'jxl', 'svg', 'gif']
+
+// 归一化格式别名（如 jpg 和 jpeg 视为同一格式）
+export function normalizeFormatAlias(fmt: string): string {
+    if (fmt === 'jpg') {
+        return 'jpeg'
+    }
+    return fmt
+}
 
 function resolveTargetFormat(target: string, original: string): string {
     if (!target) {
