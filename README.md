@@ -6,6 +6,9 @@
   <a href="https://www.npmjs.com/package/picgo-plugin-optimization" target="_blank">
     <img alt="npm downloads" src="https://img.shields.io/npm/dt/picgo-plugin-optimization?label=npm%20downloads&color=yellow">
   </a>
+  <a href="https://app.codecov.io/gh/CaoMeiYouRen/picgo-plugin-optimization" target="_blank">
+     <img alt="Codecov" src="https://img.shields.io/codecov/c/github/CaoMeiYouRen/picgo-plugin-optimization">
+  </a>
   <img alt="Version" src="https://img.shields.io/github/package-json/v/CaoMeiYouRen/picgo-plugin-optimization.svg" />
   <a href="https://github.com/CaoMeiYouRen/picgo-plugin-optimization/actions?query=workflow%3ARelease" target="_blank">
     <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/CaoMeiYouRen/picgo-plugin-optimization/release.yml?branch=master">
