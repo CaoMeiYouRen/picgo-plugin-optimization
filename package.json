@@ -121,7 +121,8 @@
     },
     "onlyBuiltDependencies": [
       "ejs",
-      "esbuild"
+      "esbuild",
+      "sharp"
     ]
   },
   "type": "module",
