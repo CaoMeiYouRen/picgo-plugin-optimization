@@ -1,6 +1,6 @@
 import type { IPicGo } from 'picgo'
 import sharp from 'sharp'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { __internal, type IPicGoOutputItem, type OptimizationConfig } from '../src/index'
 
@@ -21,6 +21,21 @@ async function createImageBuffer(format: 'avif' | 'jpeg', width = 48, height = 3
     return image.jpeg({ quality: 80 }).toBuffer()
 }
 
+async function createNoisyJpegBuffer(width = 64, height = 64): Promise<Buffer> {
+    const raw = Buffer.alloc(width * height * 3)
+    for (let i = 0; i < raw.length; i += 1) {
+        raw[i] = (i * 37) % 256
+    }
+
+    return sharp(raw, {
+        raw: {
+            width,
+            height,
+            channels: 3,
+        },
+    }).jpeg({ quality: 35 }).toBuffer()
+}
+
 function createCtx(config: OptimizationConfig, output: IPicGoOutputItem[]): IPicGo {
     return {
         getConfig: () => config,
@@ -30,6 +45,14 @@ function createCtx(config: OptimizationConfig, output: IPicGoOutputItem[]): IPic
             warn: () => undefined,
         },
         output,
+    } as unknown as IPicGo
+}
+
+function createLoggerCtx(log?: Partial<Console>): IPicGo {
+    return {
+        getConfig: () => ({}),
+        log,
+        output: [],
     } as unknown as IPicGo
 }
 
@@ -97,5 +120,236 @@ describe('optimization beforeUpload handler', () => {
         expect(item.fileName).toBe('sample.avif')
         const metadata = await sharp(item.buffer).metadata()
         expect(metadata.width).toBe(20)
+    })
+
+    it('skips items without buffer', async () => {
+        const item = {
+            extname: '.avif',
+            fileName: 'sample.avif',
+        } as IPicGoOutputItem
+        const ctx = createCtx({ format: 'avif', quality: 80 }, [item])
+
+        await __internal.handle(ctx)
+
+        expect(item.buffer).toBeUndefined()
+        expect(item.fileName).toBe('sample.avif')
+    })
+
+    it('rolls back when skipIfLarger is enabled and output becomes larger', async () => {
+        const buffer = await createNoisyJpegBuffer()
+        const item: IPicGoOutputItem = {
+            buffer,
+            extname: '.jpeg',
+            fileName: 'sample.jpeg',
+        }
+        const ctx = createCtx({ format: 'png', quality: 100, skipIfLarger: true }, [item])
+
+        await __internal.handle(ctx)
+
+        expect(item.buffer).toBe(buffer)
+        expect(item.fileName).toBe('sample.jpeg')
+        expect(item.extname).toBe('.jpeg')
+    })
+
+    it('logs errors and continues when processing fails for a broken buffer', async () => {
+        const logger = {
+            error: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+        }
+        const ctx = {
+            getConfig: () => ({ format: 'webp', enableLogging: true }),
+            log: logger,
+            output: [{ buffer: Buffer.from('not-an-image'), fileName: 'broken.bin', extname: '.bin' }],
+        } as unknown as IPicGo
+
+        await __internal.handle(ctx)
+
+        expect(logger.error).toHaveBeenCalledTimes(1)
+        expect(logger.error.mock.calls[0]?.[0]).toBe('[optimization]')
+        expect(logger.error.mock.calls[0]?.[1]).toBe('处理失败')
+    })
+})
+
+describe('optimization helpers', () => {
+    it('normalizes quality and effort boundaries', () => {
+        expect(__internal.normalizeQuality()).toBe(80)
+        expect(__internal.normalizeQuality(0)).toBe(1)
+        expect(__internal.normalizeQuality(120)).toBe(100)
+        expect(__internal.normalizeQuality(80.4)).toBe(80)
+
+        expect(__internal.normalizeEffort()).toBe(6)
+        expect(__internal.normalizeEffort(-3, 0, 9)).toBe(0)
+        expect(__internal.normalizeEffort(99, 0, 9)).toBe(9)
+    })
+
+    it('normalizes format aliases and no-op decisions', () => {
+        expect(__internal.normalizeFormatAlias('JPG')).toBe('jpeg')
+        expect(__internal.normalizeFormatAlias('HEIC')).toBe('heif')
+        expect(__internal.isSameFormat('jpg', 'jpeg')).toBe(true)
+        expect(__internal.isSameFormat('avif', 'webp')).toBe(false)
+        expect(__internal.hasResizeConstraints(0, 0)).toBe(false)
+        expect(__internal.hasResizeConstraints(0, 100)).toBe(true)
+        expect(__internal.shouldSkipOptimization('avif', 'avif', 100, false)).toBe(true)
+        expect(__internal.shouldSkipOptimization('avif', 'avif', 99, false)).toBe(false)
+    })
+
+    it('resolves config and config schema defaults', () => {
+        const ctx = createCtx({}, [])
+
+        expect(__internal.getUserConfig(ctx)).toEqual({})
+
+        const schema = __internal.config(ctx)
+        expect(schema).toHaveLength(6)
+        expect(schema[0]?.default).toBe('')
+        expect(schema[1]?.default).toBe(80)
+        expect(schema[4]?.default).toBe(true)
+        expect(schema[5]?.default).toBe(false)
+    })
+
+    it('extracts file extension and resolves target format safely', () => {
+        expect(__internal.getFileExtension({ extname: '.webp', fileName: 'foo.jpg' })).toBe('webp')
+        expect(__internal.getFileExtension({ fileName: 'foo.avif' })).toBe('avif')
+        expect(__internal.getFileExtension({})).toBe('')
+
+        expect(__internal.resolveTargetFormat('', 'jpeg')).toBe('jpeg')
+        expect(__internal.resolveTargetFormat('webp', 'jpeg')).toBe('webp')
+        expect(__internal.resolveTargetFormat('invalid-format', 'jpeg')).toBe('jpeg')
+        expect(__internal.replaceFileExt('foo.bar.jpeg', 'webp')).toBe('foo.bar.webp')
+    })
+
+    it('computes resize dimensions for width and height limits', () => {
+        expect(__internal.computeResize(400, 200, 200, 0)).toEqual({ width: 200, height: 100 })
+        expect(__internal.computeResize(400, 200, 0, 50)).toEqual({ width: 100, height: 50 })
+        expect(__internal.computeResize(400, 200, 150, 50)).toEqual({ width: 100, height: 50 })
+    })
+
+    it('calculates effort buckets used by format encoders', () => {
+        expect(__internal.getEffort(80)).toBe(8)
+        expect(__internal.getEffort(80, 15)).toBe(5)
+        expect(__internal.getEffort(80, 10, -1)).toBe(7)
+    })
+
+    it('detects source format from buffer content', async () => {
+        const buffer = await createImageBuffer('jpeg')
+
+        await expect(__internal.detectSourceFormat(buffer, 'bin')).resolves.toBe('jpg')
+    })
+
+    it('falls back to sharp metadata when file-type cannot identify the buffer', async () => {
+        const buffer = await sharp({
+            create: {
+                width: 10,
+                height: 10,
+                channels: 4,
+                background: { r: 255, g: 0, b: 0, alpha: 1 },
+            },
+        }).gif().toBuffer()
+
+        await expect(__internal.detectSourceFormat(buffer, 'bin')).resolves.toBe('gif')
+    })
+
+    it('optimizes buffers and reports whether width changed', async () => {
+        const buffer = await createImageBuffer('jpeg', 120, 60)
+
+        const resized = await __internal.optimizeBuffer(buffer, {
+            targetFormat: 'webp',
+            quality: 80,
+            maxWidth: 30,
+            maxHeight: 0,
+        })
+        const resizedMeta = await sharp(resized.buffer).metadata()
+        expect(resized.widthChanged).toBe(true)
+        expect(resizedMeta.format).toBe('webp')
+        expect(resizedMeta.width).toBe(30)
+
+        const untouched = await __internal.optimizeBuffer(buffer, {
+            targetFormat: 'jpeg',
+            quality: 80,
+            maxWidth: 0,
+            maxHeight: 0,
+        })
+        expect(untouched.widthChanged).toBe(false)
+    })
+
+    it('applies multiple output formats and leaves unsupported formats unchanged', async () => {
+        const pngSource = sharp({
+            create: {
+                width: 16,
+                height: 16,
+                channels: 4,
+                background: { r: 120, g: 60, b: 30, alpha: 1 },
+            },
+        })
+
+        const jpegBuffer = await __internal.applyFormat(pngSource.clone(), 'jpeg', 80).toBuffer()
+        const webpBuffer = await __internal.applyFormat(pngSource.clone(), 'webp', 80).toBuffer()
+        const avifBuffer = await __internal.applyFormat(pngSource.clone(), 'avif', 80).toBuffer()
+        const unchangedBuffer = await __internal.applyFormat(pngSource.clone(), 'svg', 80).png().toBuffer()
+
+        await expect(sharp(jpegBuffer).metadata()).resolves.toMatchObject({ format: 'jpeg' })
+        await expect(sharp(webpBuffer).metadata()).resolves.toMatchObject({ format: 'webp' })
+        await expect(sharp(avifBuffer).metadata()).resolves.toMatchObject({ format: 'heif' })
+        await expect(sharp(unchangedBuffer).metadata()).resolves.toMatchObject({ format: 'png' })
+    })
+
+    it('creates loggers that honor enable flag and fallback methods', () => {
+        const info = vi.fn()
+        const warn = vi.fn()
+        const error = vi.fn()
+        const disabledLogger = __internal.createLogger(createLoggerCtx({ info, warn, error }), false)
+        disabledLogger.info('hidden')
+        disabledLogger.warn('hidden-warn')
+        disabledLogger.error('visible-error')
+
+        expect(info).not.toHaveBeenCalled()
+        expect(warn).not.toHaveBeenCalled()
+        expect(error).toHaveBeenCalledWith('[optimization]', 'visible-error')
+
+        const infoOnly = vi.fn()
+        const fallbackLogger = __internal.createLogger(createLoggerCtx({ info: infoOnly }), true)
+        fallbackLogger.warn('warn-through-info')
+        fallbackLogger.error('error-through-info')
+
+        expect(infoOnly).toHaveBeenCalledWith('[optimization][WARN]', 'warn-through-info')
+        expect(infoOnly).toHaveBeenCalledWith('[optimization][ERR]', 'error-through-info')
+    })
+
+    it('shows gui config through guiApi or logger fallback', async () => {
+        const loggerInfo = vi.fn()
+        const ctx = {
+            getConfig: () => ({ quality: 90, enableLogging: true }),
+            log: { info: loggerInfo },
+            output: [],
+        } as unknown as IPicGo
+
+        const menu = __internal.guiMenu(ctx)
+        const showMessageBox = vi.fn()
+        await menu[0]?.handle(ctx, { showMessageBox })
+        expect(showMessageBox).toHaveBeenCalledTimes(1)
+
+        await menu[0]?.handle(ctx, undefined)
+        expect(loggerInfo).toHaveBeenCalledWith('[optimization]', '[optimization] 当前配置', JSON.stringify({ quality: 90, enableLogging: true }, null, 2))
+    })
+
+    it('registers the beforeUpload plugin with picgo', () => {
+        const registerSpy = vi.fn()
+        const ctx = {
+            helper: {
+                beforeUploadPlugins: {
+                    register: registerSpy,
+                },
+            },
+        } as unknown as IPicGo
+
+        __internal.register(ctx)
+
+        expect(registerSpy).toHaveBeenCalledTimes(1)
+        expect(registerSpy.mock.calls[0]?.[0]).toBe('optimization')
+        expect(registerSpy.mock.calls[0]?.[1]).toMatchObject({
+            config: __internal.config,
+            handle: __internal.handle,
+            name: '图片优化 (beforeUpload)',
+        })
     })
 })

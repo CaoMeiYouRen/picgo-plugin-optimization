@@ -396,11 +396,24 @@ const register = (ctx: IPicGo): void => {
 export { register }
 export const beforeUploadPlugins = 'optimization'
 export const __internal = {
+    applyFormat,
+    computeResize,
+    config,
+    createLogger,
     detectSourceFormat,
+    getEffort,
+    getFileExtension,
+    getUserConfig,
+    guiMenu,
     handle,
     hasResizeConstraints,
     isSameFormat,
     normalizeFormatAlias,
+    normalizeEffort,
+    normalizeQuality,
+    optimizeBuffer,
+    register,
+    replaceFileExt,
     resolveTargetFormat,
     shouldSkipOptimization,
 }
