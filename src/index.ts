@@ -148,6 +148,7 @@ async function handle(ctx: IPicGo): Promise<void> {
             }
             const beforeSize = item.buffer.length
             const originalExt = getFileExtension(item)
+            // 远端图片转存时响应头和扩展名都可能不可靠，优先用二进制内容识别真实格式。
             const sourceFormat = await detectSourceFormat(item.buffer, originalExt)
             const targetFormat = resolveTargetFormat(userConfig.format || '', sourceFormat)
             const quality = normalizeQuality(userConfig.quality)
@@ -164,6 +165,7 @@ async function handle(ctx: IPicGo): Promise<void> {
                 plan: { format: targetFormat, quality, resize: (maxWidth || maxHeight) ? `${maxWidth || 'auto'}x${maxHeight || 'auto'}` : 'no' },
             })
 
+            // 只有这次处理本身是 no-op 时才跳过，避免 quality < 100 的同格式图片漏掉压缩。
             if (shouldSkipOptimization(sourceFormat, targetFormat, quality, needResize)) {
                 logger.info('跳过处理: 源格式与目标格式一致且未请求压缩或缩放', {
                     file: item.fileName,
@@ -181,12 +183,14 @@ async function handle(ctx: IPicGo): Promise<void> {
                 maxHeight,
             })
 
+            // 某些原图已经非常激进地压缩过，结果更大时直接回退，避免劣化用户体验。
             if (skipIfLarger && newBuffer.length > beforeSize) {
                 logger.warn('回退: 转换后更大', { file: item.fileName, before: beforeSize, after: newBuffer.length })
                 continue
             }
 
             item.buffer = newBuffer
+            // 只有格式确实变化时才改扩展名，避免同格式压缩后把文件名改坏。
             if (!isSameFormat(targetFormat, originalExt)) {
                 item.extname = `.${targetFormat}`
                 if (item.fileName) {
@@ -278,6 +282,7 @@ async function detectSourceFormat(input: Buffer, fallbackExt: string): Promise<s
         return detected.ext.toLowerCase()
     }
 
+    // 极少数格式 file-type 识别不到时，再让 sharp 读取 metadata 做兜底。
     const metadata = await sharp(input, { sequentialRead: true }).metadata()
     if (metadata.format) {
         return metadata.format.toLowerCase()
@@ -315,7 +320,7 @@ async function optimizeBuffer(input: Buffer, opt: OptimizeOptions): Promise<Opti
     const meta = await image.metadata()
     let widthChanged = false
     let resized = image
-    // resize 逻辑
+    // 先缩放再编码，既能减少编码成本，也能避免对原始尺寸做无意义重编码。
     if ((maxWidth || maxHeight) && meta.width && meta.height) {
         const { width, height } = computeResize(meta.width, meta.height, maxWidth, maxHeight)
         if (width !== meta.width || height !== meta.height) {

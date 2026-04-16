@@ -166,6 +166,7 @@ picgo.use(require("picgo-plugin-optimization"));
 | `enableLogging` | `boolean` | `false`      | 输出更详细的调试日志（PicGo 日志面板或控制台）           |
 
 > 注意：`svg` / `gif` 等格式在某些转换路径下可能不会有明显压缩收益；`avif`、`heif`、`jxl` 等需要 `sharp`/`libvips` 当前编译版本支持，否则可能回退或报错。
+> 注意：插件会优先基于图片 Buffer 识别真实格式，而不是只依赖扩展名或远端响应头；因此即使图片来自网络转存，只要 `quality < 100` 或配置了缩放，仍会继续执行压缩/缩放，不会因为“看起来同格式”就直接跳过。
 
 ---
 
@@ -177,9 +178,12 @@ picgo.use(require("picgo-plugin-optimization"));
     - 打开 `enableLogging` 查看调试日志
 2. 体积为什么变大？
     - 某些图片已高度压缩，再次有损压缩难以缩小；可以开启 `skipIfLarger`（默认已开）自动回退。
-3. 是否可以只缩放不改格式？
+3. 已经是 `avif/webp/jpeg` 了，为什么还会再次处理？
+    - 只要你配置了 `quality < 100`，插件仍会做一次压缩；只有“目标格式与真实源格式一致、未配置缩放、且 `quality >= 100`”时才会跳过处理。
+    - 这样可以避免网络来源图片因为 `content-type` 不准确而误判格式，同时也保证低质量压缩配置会真正生效。
+4. 是否可以只缩放不改格式？
     - 可以，把 `format` 留空，只设置 `maxWidth` / `maxHeight`。
-4. 转成 `webp/avif` 后透明度丢失？
+5. 转成 `webp/avif` 后透明度丢失？
     - 请使用最新 `sharp`，大多数情况下透明度会保留；若仍有问题可以退回 `png`。
 
 ---
