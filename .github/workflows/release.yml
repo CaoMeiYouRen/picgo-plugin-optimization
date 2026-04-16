@@ -17,6 +17,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      id-token: write # Required for OIDC
     steps:
       - uses: actions/checkout@v6
         with:
@@ -31,9 +32,10 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
       - run: pnpm i --frozen-lockfile
+      - run: pnpm run typecheck
       - run: pnpm run lint
       - run: pnpm run build
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release
