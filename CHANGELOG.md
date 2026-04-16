@@ -1,5 +1,12 @@
 # picgo-plugin-optimization
 
+# [1.1.0](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.3...v1.1.0) (2026-04-16)
+
+
+### ✨ 新功能
+
+* **index:** 增强图片处理功能 ([aa8769d](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/aa8769d))
+
 ## [1.0.3](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.2...v1.0.3) (2025-11-19)
 
 
