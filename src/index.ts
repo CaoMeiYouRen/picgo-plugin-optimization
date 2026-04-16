@@ -1,4 +1,5 @@
 import { IPicGo, IPluginConfig } from 'picgo'
+import { fileTypeFromBuffer } from 'file-type'
 import sharp from 'sharp'
 
 // 统一日志封装，优先使用 ctx.log，受 enableLogging 控制
@@ -35,6 +36,11 @@ export interface IPicGoOutputItem {
     fileName: string
     extname?: string
     [k: string]: any
+}
+
+interface OutputFileLike {
+    fileName?: string
+    extname?: string
 }
 
 // 插件用户配置类型
@@ -141,25 +147,32 @@ async function handle(ctx: IPicGo): Promise<void> {
                 continue
             }
             const beforeSize = item.buffer.length
-            const originalExt = (item.extname || item.fileName.split('.').pop() || '').toLowerCase().replace(/^\./, '')
-            const targetFormat = resolveTargetFormat(userConfig.format || '', originalExt)
+            const originalExt = getFileExtension(item)
+            const sourceFormat = await detectSourceFormat(item.buffer, originalExt)
+            const targetFormat = resolveTargetFormat(userConfig.format || '', sourceFormat)
             const quality = normalizeQuality(userConfig.quality)
             const maxWidth = userConfig.maxWidth || 0
             const maxHeight = userConfig.maxHeight || 0
             const skipIfLarger = userConfig.skipIfLarger !== false // 默认 true
+            const needResize = hasResizeConstraints(maxWidth, maxHeight)
 
             logger.info('处理文件', {
                 file: item.fileName,
                 originalExt,
+                sourceFormat,
                 size: beforeSize,
                 plan: { format: targetFormat, quality, resize: (maxWidth || maxHeight) ? `${maxWidth || 'auto'}x${maxHeight || 'auto'}` : 'no' },
             })
 
-            // 若无需转换且无需缩放则跳过
-            // const needResize = !!(maxWidth || maxHeight)
-            // if (!needResize && targetFormat === originalExt) {
-            //     continue
-            // }
+            if (shouldSkipOptimization(sourceFormat, targetFormat, quality, needResize)) {
+                logger.info('跳过处理: 源格式与目标格式一致且未请求压缩或缩放', {
+                    file: item.fileName,
+                    sourceFormat,
+                    targetFormat,
+                    quality,
+                })
+                continue
+            }
 
             const { buffer: newBuffer, widthChanged } = await optimizeBuffer(item.buffer, {
                 targetFormat,
@@ -174,9 +187,11 @@ async function handle(ctx: IPicGo): Promise<void> {
             }
 
             item.buffer = newBuffer
-            if (targetFormat !== originalExt) {
+            if (!isSameFormat(targetFormat, originalExt)) {
                 item.extname = `.${targetFormat}`
-                item.fileName = replaceFileExt(item.fileName, targetFormat)
+                if (item.fileName) {
+                    item.fileName = replaceFileExt(item.fileName, targetFormat)
+                }
             }
             const saved = ((1 - newBuffer.length / beforeSize) * 100).toFixed(2)
             logger.info('完成优化', { file: item.fileName, widthChanged, savedPercent: saved, newSize: newBuffer.length })
@@ -228,6 +243,48 @@ function normalizeEffort(effort?: number, min = 1, max = 10): number {
 
 export type Format = 'jpeg' | 'jpg' | 'png' | 'webp' | 'jp2' | 'tiff' | 'avif' | 'heif' | 'jxl' | 'svg' | 'gif'
 const SUPPORTED_FORMATS: Format[] = ['jpeg', 'jpg', 'png', 'webp', 'jp2', 'tiff', 'avif', 'heif', 'jxl', 'svg', 'gif']
+
+function normalizeFormatAlias(format: string): string {
+    const lower = format.toLowerCase()
+    switch (lower) {
+        case 'jpg':
+            return 'jpeg'
+        case 'heic':
+            return 'heif'
+        default:
+            return lower
+    }
+}
+
+function isSameFormat(source: string, target: string): boolean {
+    return normalizeFormatAlias(source) === normalizeFormatAlias(target)
+}
+
+function hasResizeConstraints(maxWidth: number, maxHeight: number): boolean {
+    return Boolean(maxWidth || maxHeight)
+}
+
+function shouldSkipOptimization(sourceFormat: string, targetFormat: string, quality: number, needResize: boolean): boolean {
+    return !needResize && quality >= 100 && isSameFormat(sourceFormat, targetFormat)
+}
+
+function getFileExtension(item: OutputFileLike): string {
+    return (item.extname || item.fileName?.split('.').pop() || '').toLowerCase().replace(/^\./, '')
+}
+
+async function detectSourceFormat(input: Buffer, fallbackExt: string): Promise<string> {
+    const detected = await fileTypeFromBuffer(input)
+    if (detected?.ext) {
+        return detected.ext.toLowerCase()
+    }
+
+    const metadata = await sharp(input, { sequentialRead: true }).metadata()
+    if (metadata.format) {
+        return metadata.format.toLowerCase()
+    }
+
+    return fallbackExt
+}
 
 function resolveTargetFormat(target: string, original: string): string {
     if (!target) {
@@ -333,6 +390,15 @@ const register = (ctx: IPicGo): void => {
 
 export { register }
 export const beforeUploadPlugins = 'optimization'
+export const __internal = {
+    detectSourceFormat,
+    handle,
+    hasResizeConstraints,
+    isSameFormat,
+    normalizeFormatAlias,
+    resolveTargetFormat,
+    shouldSkipOptimization,
+}
 
 module.exports = (ctx: IPicGo) => ({
     register,
