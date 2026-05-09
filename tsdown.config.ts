@@ -16,7 +16,7 @@ export default defineConfig({
     // exports: true, // 自动生成包导出
     // splitting: false, // 代码拆分
     deps: {
-        neverBundle: ['debug'], // 永远不打包的依赖项
+        neverBundle: ['debug', 'picgo', 'axios'], // 永远不打包的依赖项
         alwaysBundle: ['file-type'], // 永远打包的依赖项
     },
     env: {
