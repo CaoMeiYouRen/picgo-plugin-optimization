@@ -1,5 +1,17 @@
 # picgo-plugin-optimization
 
+## [1.1.1](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.1.0...v1.1.1) (2026-05-09)
+
+
+### 🐛 Bug 修复
+
+* **tsdown:** 重构依赖项配置 ([aae8175](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/aae8175))
+
+
+### 📦 代码重构
+
+* **tsdown:** 修改 neverBundle 依赖项，添加 picgo 和 axios ([52b0975](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/52b0975))
+
 # [1.1.0](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.0.3...v1.1.0) (2026-04-16)
 
 
