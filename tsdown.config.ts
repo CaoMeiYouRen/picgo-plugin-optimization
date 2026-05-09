@@ -15,8 +15,10 @@ export default defineConfig({
     shims: true, // 注入 cjs 和 esm 填充代码，解决 import.meta.url 和 __dirname 的兼容问题
     // exports: true, // 自动生成包导出
     // splitting: false, // 代码拆分
-    external: ['debug'], // 排除的依赖项
-    // noExternal: [/(.*)/], // 将依赖打包到一个文件中
+    deps: {
+        neverBundle: ['debug'], // 永远不打包的依赖项
+        alwaysBundle: ['file-type'], // 永远打包的依赖项
+    },
     env: {
         NODE_ENV: 'production',
     },
