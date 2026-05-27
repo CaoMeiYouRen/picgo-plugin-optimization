@@ -418,9 +418,12 @@ export const __internal = {
     shouldSkipOptimization,
 }
 
-module.exports = (ctx: IPicGo) => ({
-    register,
-    beforeUploadPlugins,
-    guiMenu,
-    config,
-})
+module.exports = (ctx: IPicGo) => {
+    void ctx
+    return {
+        register,
+        beforeUploadPlugins,
+        guiMenu,
+        config,
+    }
+}
