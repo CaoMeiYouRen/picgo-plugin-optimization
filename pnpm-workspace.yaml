@@ -4,14 +4,27 @@ allowBuilds:
   esbuild: true
   sharp: true
 overrides:
+  '@eslint/eslintrc>ajv': ^6.15.0
+  '@eslint/config-array>minimatch': ^3.1.4
+  '@eslint/eslintrc>minimatch': ^3.1.4
+  '@hono/node-server': ^1.19.14
   compare-func: ^2.0.0
+  'eslint>ajv': ^6.15.0
+  'eslint>minimatch': ^3.1.4
+  'eslint-plugin-import>minimatch': ^3.1.4
+  fast-uri: ^3.1.2
+  flatted: ^3.4.2
+  'glob>minimatch': ^3.1.4
+  hono: ^4.12.23
   katex: ^0.16.21
+  lodash: ^4.18.1
+  lodash-es: ^4.18.1
   esbuild: ^0.25.0
   '@octokit/plugin-paginate-rest': ^11.4.1
   '@octokit/request': ^9.2.1
   '@octokit/request-error': ^5.1.1
   brace-expansion: ^2.0.3
-  tmp: ^0.2.4
+  tmp: ^0.2.6
   '@semantic-release/commit-analyzer': ^13.0.1
   '@semantic-release/error': ^4.0.0
   '@semantic-release/github': ^12.0.0
@@ -26,3 +39,6 @@ overrides:
   tar: ^7.5.2
   js-yaml: ^4.1.1
   handlebars: ^4.7.9
+  'uvu>diff': ^5.2.2
+minimumReleaseAgeExclude:
+  - tmp@0.2.6
