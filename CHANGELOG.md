@@ -1,5 +1,12 @@
 # picgo-plugin-optimization
 
+## [1.1.2](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.1.1...v1.1.2) (2026-05-27)
+
+
+### 🐛 Bug 修复
+
+* **deps:** 修复安全依赖告警 ([ca61283](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/ca61283))
+
 ## [1.1.1](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.1.0...v1.1.1) (2026-05-09)
 
 
