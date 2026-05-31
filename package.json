@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.2",
     "@types/debug": "^4.1.13",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.9.1",
