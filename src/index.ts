@@ -53,10 +53,33 @@ export interface OptimizationConfig {
     skipIfLarger?: boolean // 如果转换后体积更大则回退原始
 }
 
-// 从 PicGo 配置读取当前插件配置
+// 从 PicGo 配置读取当前插件配置（统一规范化类型，防御 PicGo input 类型返回字符串的问题）
 function getUserConfig(ctx: IPicGo): OptimizationConfig {
-    const cfg = ctx.getConfig<OptimizationConfig>('picgo-plugin-optimization') || {}
-    return cfg
+    const raw = (ctx.getConfig<any>('picgo-plugin-optimization') || {}) as Record<string, unknown>
+    return {
+        format: String(raw.format ?? ''),
+        quality: normalizeQuality(raw.quality as number | string | undefined),
+        maxWidth: Number(raw.maxWidth) || 0,
+        maxHeight: Number(raw.maxHeight) || 0,
+        skipIfLarger: normalizeBool(raw.skipIfLarger, true),
+        enableLogging: normalizeBool(raw.enableLogging, false),
+    }
+}
+
+function normalizeBool(value: unknown, fallback: boolean): boolean {
+    if (typeof value === 'boolean') {
+        return value
+    }
+    if (typeof value === 'string') {
+        const lower = value.toLowerCase()
+        if (lower === 'true') {
+            return true
+        }
+        if (lower === 'false') {
+            return false
+        }
+    }
+    return fallback
 }
 
 // 生成可视化配置 Schema（GUI / CLI config）
@@ -118,7 +141,7 @@ function config(ctx: IPicGo): IPluginConfig[] {
 // GUI 菜单 (PicGo GUI 调用)
 function guiMenu(ctx: IPicGo) {
     const userConfig = getUserConfig(ctx)
-    const logger = createLogger(ctx, !!userConfig.enableLogging)
+    const logger = createLogger(ctx, userConfig.enableLogging)
     return [
         {
             label: '查看当前json配置',
@@ -138,7 +161,7 @@ function guiMenu(ctx: IPicGo) {
 // 核心处理逻辑
 async function handle(ctx: IPicGo): Promise<void> {
     const userConfig = getUserConfig(ctx)
-    const logger = createLogger(ctx, !!userConfig.enableLogging)
+    const logger = createLogger(ctx, userConfig.enableLogging)
     logger.info('用户配置', userConfig)
     const output = ctx.output || []
     for (const item of output) {
@@ -150,11 +173,11 @@ async function handle(ctx: IPicGo): Promise<void> {
             const originalExt = getFileExtension(item)
             // 远端图片转存时响应头和扩展名都可能不可靠，优先用二进制内容识别真实格式。
             const sourceFormat = await detectSourceFormat(item.buffer, originalExt)
-            const targetFormat = resolveTargetFormat(userConfig.format || '', sourceFormat)
+            const targetFormat = resolveTargetFormat(userConfig.format, sourceFormat)
             const quality = normalizeQuality(userConfig.quality)
-            const maxWidth = userConfig.maxWidth || 0
-            const maxHeight = userConfig.maxHeight || 0
-            const skipIfLarger = userConfig.skipIfLarger !== false // 默认 true
+            const maxWidth = userConfig.maxWidth
+            const maxHeight = userConfig.maxHeight
+            const skipIfLarger = userConfig.skipIfLarger
             const needResize = hasResizeConstraints(maxWidth, maxHeight)
 
             logger.info('处理文件', {
@@ -214,17 +237,18 @@ interface OptimizeOptions {
     maxHeight: number
 }
 
-function normalizeQuality(q?: number): number {
-    if (typeof q !== 'number') {
+function normalizeQuality(q?: number | string): number {
+    const num = typeof q === 'string' ? Number(q) : q
+    if (typeof num !== 'number' || Number.isNaN(num)) {
         return 80
     }
-    if (q < 1) {
+    if (num < 1) {
         return 1
     }
-    if (q > 100) {
+    if (num > 100) {
         return 100
     }
-    return Math.round(q)
+    return Math.round(num)
 }
 
 /**
@@ -408,6 +432,7 @@ export const __internal = {
     handle,
     hasResizeConstraints,
     isSameFormat,
+    normalizeBool,
     normalizeFormatAlias,
     normalizeEffort,
     normalizeQuality,

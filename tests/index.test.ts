@@ -197,7 +197,14 @@ describe('optimization helpers', () => {
     it('resolves config and config schema defaults', () => {
         const ctx = createCtx({}, [])
 
-        expect(__internal.getUserConfig(ctx)).toEqual({})
+        expect(__internal.getUserConfig(ctx)).toEqual({
+            format: '',
+            quality: 80,
+            maxWidth: 0,
+            maxHeight: 0,
+            skipIfLarger: true,
+            enableLogging: false,
+        })
 
         const schema = __internal.config(ctx)
         expect(schema).toHaveLength(6)
@@ -205,6 +212,72 @@ describe('optimization helpers', () => {
         expect(schema[1]?.default).toBe(80)
         expect(schema[4]?.default).toBe(true)
         expect(schema[5]?.default).toBe(false)
+    })
+
+    it('normalizes string config values from PicGo input fields', () => {
+        const ctx = createCtx({
+            format: '',
+            quality: '90',
+            maxWidth: '0',
+            maxHeight: '800',
+            skipIfLarger: 'false',
+            enableLogging: 'true',
+        } as any, [])
+
+        const cfg = __internal.getUserConfig(ctx)
+        expect(cfg.format).toBe('')
+        expect(cfg.quality).toBe(90)
+        expect(cfg.maxWidth).toBe(0)
+        expect(cfg.maxHeight).toBe(800)
+        expect(cfg.skipIfLarger).toBe(false)
+        expect(cfg.enableLogging).toBe(true)
+    })
+
+    it('normalizeBool handles edge cases', () => {
+        expect(__internal.normalizeBool(true, false)).toBe(true)
+        expect(__internal.normalizeBool(false, true)).toBe(false)
+        expect(__internal.normalizeBool('true', false)).toBe(true)
+        expect(__internal.normalizeBool('TRUE', false)).toBe(true)
+        expect(__internal.normalizeBool('false', true)).toBe(false)
+        expect(__internal.normalizeBool(undefined, true)).toBe(true)
+        expect(__internal.normalizeBool(null, false)).toBe(false)
+        expect(__internal.normalizeBool(1, true)).toBe(true)
+        expect(__internal.normalizeBool('yes', false)).toBe(false)
+    })
+
+    it('normalizeQuality handles string quality correctly', () => {
+        expect(__internal.normalizeQuality('90')).toBe(90)
+        expect(__internal.normalizeQuality('80.4')).toBe(80)
+        expect(__internal.normalizeQuality('0')).toBe(1)
+        expect(__internal.normalizeQuality('120')).toBe(100)
+        expect(__internal.normalizeQuality('abc')).toBe(80)
+    })
+
+    it('handle applies string quality from PicGo config correctly', async () => {
+        const buffer = await createImageBuffer('jpeg')
+        const item: IPicGoOutputItem = {
+            buffer,
+            extname: '.jpg',
+            fileName: 'test.jpg',
+        }
+
+        // Simulate string config as returned by PicGo input fields
+        const ctx = createCtx({
+            format: '',
+            quality: '95',
+            maxWidth: '0',
+            maxHeight: '0',
+            skipIfLarger: 'false',
+            enableLogging: 'false',
+        } as any, [item])
+
+        await __internal.handle(ctx)
+
+        // Quality 95 < 100 should trigger recompression even if format unchanged
+        expect(item.buffer).not.toBe(buffer)
+        // Format unchanged, so extname and fileName stay same
+        expect(item.extname).toBe('.jpg')
+        expect(item.fileName).toBe('test.jpg')
     })
 
     it('extracts file extension and resolves target format safely', () => {
