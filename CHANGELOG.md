@@ -1,5 +1,12 @@
 # picgo-plugin-optimization
 
+## [1.1.3](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.1.2...v1.1.3) (2026-06-22)
+
+
+### 🐛 Bug 修复
+
+* **config:** 规范化用户配置处理逻辑 ([262a57f](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/commit/262a57f))
+
 ## [1.1.2](https://github.com/CaoMeiYouRen/picgo-plugin-optimization/compare/v1.1.1...v1.1.2) (2026-05-27)
 
 
