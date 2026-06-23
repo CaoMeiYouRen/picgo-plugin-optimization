@@ -4,6 +4,7 @@ allowBuilds:
   esbuild: true
   sharp: true
 overrides:
+  undici: ^7.28.0
   '@eslint/eslintrc>ajv': ^6.15.0
   '@eslint/config-array>minimatch': ^3.1.4
   '@eslint/eslintrc>minimatch': ^3.1.4
