@@ -91,7 +91,7 @@
     "url": "https://github.com/CaoMeiYouRen/picgo-plugin-optimization/issues"
   },
   "dependencies": {
-    "file-type": "^22.0.1",
+    "file-type": "^22.0.2",
     "fs-extra": "^11.4.0",
     "image-size": "^2.0.2",
     "sharp": "^0.35.0",
