@@ -57,8 +57,8 @@ importers:
         specifier: ^11.4.0
         version: 11.4.0
       image-size:
-        specifier: ^2.0.3
-        version: 2.0.3
+        specifier: ^2.0.4
+        version: 2.0.4
       sharp:
         specifier: ^0.35.0
         version: 0.35.0
@@ -2556,8 +2556,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  image-size@2.0.3:
-    resolution: {integrity: sha512-9BJAtVCBth+76NwqnEfWr3PiRnYhbquk6K/USuQ1GQajz5NgLzO7tNsnoNjHfO7LuftgkBf+CCH6j28hjMbIYQ==}
+  image-size@2.0.4:
+    resolution: {integrity: sha512-QRUkFFsRV/6fuESxb9Vkq+a0LkSrgKXuc2NEqfikiXxxN/G3tjWt5EVUlMaImRBZRZK/jRBEbYvpPYZL8t08Zw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -7317,7 +7317,7 @@ snapshots:
 
   image-size-next@2.1.1: {}
 
-  image-size@2.0.3: {}
+  image-size@2.0.4: {}
 
   import-fresh@3.2.1:
     dependencies:
