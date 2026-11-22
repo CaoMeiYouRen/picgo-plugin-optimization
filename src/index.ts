@@ -1,6 +1,6 @@
 import { IPicGo, IPluginConfig } from 'picgo'
 import { fileTypeFromBuffer } from 'file-type'
-import sharp from 'sharp'
+import sharp, { type Sharp } from 'sharp'
 
 // 统一日志封装，优先使用 ctx.log，受 enableLogging 控制
 function createLogger(ctx: IPicGo, enable: boolean) {
@@ -381,7 +381,7 @@ function getEffort(quality: number, divisor: number = 10, offset: number = 0): n
     return Math.floor(quality / divisor) + offset
 }
 
-function applyFormat(instance: sharp.Sharp, fmt: string, quality: number): sharp.Sharp {
+function applyFormat(instance: Sharp, fmt: string, quality: number): Sharp {
     switch (fmt) {
         case 'jpg':
         case 'jpeg':
